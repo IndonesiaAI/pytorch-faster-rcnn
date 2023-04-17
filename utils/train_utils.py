@@ -6,104 +6,10 @@ from collections import defaultdict, deque
 import torch.distributed as dist
 from torchvision import ops
 
-from backbone.mobilenet import MobileNetV2
-from backbone.resnet50_fpn_model import *
 from config.train_config import cfg
 from utils.anchor_utils import AnchorsGenerator
 from utils.faster_rcnn_utils import FasterRCNN, FastRCNNPredictor
-
-
-def create_model(num_classes):
-    global backbone, model
-    backbone_network = cfg.backbone
-
-    anchor_sizes = tuple((f,) for f in cfg.anchor_size)
-    aspect_ratios = tuple((f,) for f in cfg.anchor_ratio) * len(anchor_sizes)
-    anchor_generator = AnchorsGenerator(sizes=anchor_sizes,
-                                        aspect_ratios=aspect_ratios)
-
-    if backbone_network == 'mobilenet':
-        backbone = MobileNetV2(weights_path=cfg.backbone_pretrained_weights).features
-        backbone.out_channels = 1280
-
-        roi_pooler = ops.MultiScaleRoIAlign(featmap_names=['0'],  # roi pooling in which resolution feature
-                                            output_size=cfg.roi_out_size,  # roi_pooling output feature size
-                                            sampling_ratio=cfg.roi_sample_rate)  # sampling_ratio
-
-        model = FasterRCNN(backbone=backbone, num_classes=num_classes,
-                           # transform parameters
-                           min_size=cfg.min_size, max_size=cfg.max_size,
-                           image_mean=cfg.image_mean, image_std=cfg.image_std,
-                           # rpn parameters
-                           rpn_anchor_generator=anchor_generator, box_roi_pool=roi_pooler,
-                           rpn_pre_nms_top_n_train=cfg.rpn_pre_nms_top_n_train,
-                           rpn_pre_nms_top_n_test=cfg.rpn_pre_nms_top_n_test,
-                           rpn_post_nms_top_n_train=cfg.rpn_post_nms_top_n_train,
-                           rpn_post_nms_top_n_test=cfg.rpn_post_nms_top_n_test,
-                           rpn_nms_thresh=cfg.rpn_nms_thresh,
-                           rpn_fg_iou_thresh=cfg.rpn_fg_iou_thresh,
-                           rpn_bg_iou_thresh=cfg.rpn_bg_iou_thresh,
-                           rpn_batch_size_per_image=cfg.rpn_batch_size_per_image,
-                           rpn_positive_fraction=cfg.rpn_positive_fraction,
-                           # Box parameters
-                           box_head=None, box_predictor=None,
-
-                           # remove low threshold target
-                           box_score_thresh=cfg.box_score_thresh,
-                           box_nms_thresh=cfg.box_nms_thresh,
-                           box_detections_per_img=cfg.box_detections_per_img,
-                           box_fg_iou_thresh=cfg.box_fg_iou_thresh,
-                           box_bg_iou_thresh=cfg.box_bg_iou_thresh,
-                           box_batch_size_per_image=cfg.box_batch_size_per_image,
-                           box_positive_fraction=cfg.box_positive_fraction,
-                           bbox_reg_weights=cfg.bbox_reg_weights
-                           )
-    elif backbone_network == 'resnet50_fpn':
-        backbone = resnet50_fpn_backbone()
-
-        roi_pooler = ops.MultiScaleRoIAlign(
-            featmap_names=['0', '1', '2', '3'],
-            output_size=cfg.roi_out_size,
-            sampling_ratio=cfg.roi_sample_rate)
-        model = FasterRCNN(backbone=backbone, num_classes=num_classes,
-                           # transform parameters
-                           min_size=cfg.min_size, max_size=cfg.max_size,
-                           image_mean=cfg.image_mean, image_std=cfg.image_std,
-                           # rpn parameters
-                           rpn_anchor_generator=anchor_generator, box_roi_pool=roi_pooler,
-                           rpn_pre_nms_top_n_train=cfg.rpn_pre_nms_top_n_train,
-                           rpn_pre_nms_top_n_test=cfg.rpn_pre_nms_top_n_test,
-                           rpn_post_nms_top_n_train=cfg.rpn_post_nms_top_n_train,
-                           rpn_post_nms_top_n_test=cfg.rpn_post_nms_top_n_test,
-                           rpn_nms_thresh=cfg.rpn_nms_thresh,
-                           rpn_fg_iou_thresh=cfg.rpn_fg_iou_thresh,
-                           rpn_bg_iou_thresh=cfg.rpn_bg_iou_thresh,
-                           rpn_batch_size_per_image=cfg.rpn_batch_size_per_image,
-                           rpn_positive_fraction=cfg.rpn_positive_fraction,
-                           # Box parameters
-                           box_head=None, box_predictor=None,
-
-                           # remove low threshold target
-                           box_score_thresh=cfg.box_score_thresh,
-                           box_nms_thresh=cfg.box_nms_thresh,
-                           box_detections_per_img=cfg.box_detections_per_img,
-                           box_fg_iou_thresh=cfg.box_fg_iou_thresh,
-                           box_bg_iou_thresh=cfg.box_bg_iou_thresh,
-                           box_batch_size_per_image=cfg.box_batch_size_per_image,
-                           box_positive_fraction=cfg.box_positive_fraction,
-                           bbox_reg_weights=cfg.bbox_reg_weights
-                           )
-
-        # weights_dict = torch.load(cfg.pretrained_weights)
-        # missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
-        # if len(missing_keys) != 0 or len(unexpected_keys) != 0:
-        #     print("missing_keys: ", missing_keys)
-        #     print("unexpected_keys: ", unexpected_keys)
-
-        in_features = model.roi_heads.box_predictor.cls_score.in_features
-        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-
-    return model
+import torch
 
 
 def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):

@@ -205,7 +205,7 @@ def loadRes(self, resFile):
     res = COCO()
     res.dataset['images'] = [img for img in self.dataset['images']]
 
-    if isinstance(resFile, torch._six.string_classes):
+    if isinstance(resFile, str):
         anns = json.load(open(resFile))
     elif type(resFile) == np.ndarray:
         anns = self.loadNumpyAnnotations(resFile)

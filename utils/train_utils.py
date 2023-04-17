@@ -3,7 +3,6 @@ import pickle
 import time
 from collections import defaultdict, deque
 
-import torch.distributed as dist
 from torchvision import ops
 
 from config.train_config import cfg
@@ -23,11 +22,7 @@ def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
 
 
 def is_dist_avail_and_initialized():
-    if not dist.is_available():
-        return False
-    if not dist.is_initialized():
-        return False
-    return True
+    return False
 
 
 def get_world_size():
@@ -56,7 +51,6 @@ def reduce_dict(input_dict, average=True):
             names.append(k)
             values.append(input_dict[k])
         values = torch.stack(values, dim=0)
-        dist.all_reduce(values)
         if average:
             values /= world_size
 
@@ -87,8 +81,6 @@ class SmoothedValue(object):
         Warning: does not synchronize the deque!
         """
         t = torch.tensor([self.count, self.total], dtype=torch.float64, device="cuda")
-        dist.barrier()
-        dist.all_reduce(t)
         t = t.tolist()
         self.count = int(t[0])
         self.total = t[1]
@@ -144,7 +136,7 @@ def all_gather(data):
     # obtain Tensor size of each rank
     local_size = torch.tensor([tensor.numel()], device="cuda")
     size_list = [torch.tensor([0], device="cuda") for _ in range(world_size)]
-    dist.all_gather(size_list, local_size)
+    
     size_list = [int(size.item()) for size in size_list]
     max_size = max(size_list)
 
@@ -157,7 +149,7 @@ def all_gather(data):
     if local_size != max_size:
         padding = torch.empty(size=(max_size - local_size,), dtype=torch.uint8, device="cuda")
         tensor = torch.cat((tensor, padding), dim=0)
-    dist.all_gather(tensor_list, tensor)
+    
 
     data_list = []
     for size, tensor in zip(size_list, tensor_list):

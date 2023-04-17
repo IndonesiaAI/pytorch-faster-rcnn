@@ -1,13 +1,10 @@
 
 
 class Config:
-    backbone = 'mobilenet'  # [vgg16, resnet-fpn, mobilenet, resnet50_fpn]
-    backbone_pretrained_weights = None  # [path or None]
-
     # data transform parameter
     train_horizon_flip_prob = 0.0  # data horizon flip probility in train transform
-    min_size = 800
-    max_size = 1000
+    min_size = 300
+    max_size = 500
     image_mean = [0.485, 0.456, 0.406]
     image_std = [0.229, 0.224, 0.225]
 
@@ -42,7 +39,7 @@ class Config:
     box_positive_fraction = 0.25
     bbox_reg_weights = None
 
-    device_name = 'cuda:7'
+    device_name = 'cuda'
 
     resume = ''  # pretrained_weights
     start_epoch = 0  # start epoch
@@ -59,9 +56,10 @@ class Config:
 
     batch_size = 6
 
-    num_class = 80 + 1  # foreground + 1 background
-    data_root_dir = " "
-    model_save_dir = " "
+    num_class = 7 + 1  # foreground + 1 background
+    data_root_dir_train = "train"
+    data_root_dir_valid = "valid"
+    model_save_dir = "checkpoint"
 
 
 cfg = Config()

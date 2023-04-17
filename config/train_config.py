@@ -2,6 +2,7 @@
 
 class Config:
     # data transform parameter
+    backbone = "resnet"
     train_horizon_flip_prob = 0.0  # data horizon flip probility in train transform
     min_size = 300
     max_size = 500
